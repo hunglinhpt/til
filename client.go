@@ -1,104 +1,67 @@
 package main
 
 import (
-	"bufio"
-	"context"
+	"bytes"
 	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"github.com/posener/h2conn"
 	"golang.org/x/net/http2"
+	"io"
+	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"strings"
 )
 
-type Client struct {
-	C *http.Client
-}
-
-func NewClient() *Client {
-	return &Client{
-		C: &http.Client{
-			Transport: &http2.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		},
-	}
-}
-
-func Request(url string) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go catchSignal(cancel)
-
-	// We use a client with custom http2.Transport since the server certificate is not signed by
-	// an authorized CA, and this is the way to ignore certificate verification errors.
-	d := &h2conn.Client{
-		Client: &http.Client{
-			Transport: &http2.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-		},
-		Method: http.MethodPost,
-	}
-
-	conn, resp, err := d.Connect(ctx, url)
+func Post(url string, buf *bytes.Buffer) {
+	transport := &http2.Transport{DialTLS: dialT(buf), TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
-		log.Fatalf("Initiate conn: %s", err)
-	}
-	defer conn.Close()
-
-	// Check server status code
-	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Bad status code: %d", resp.StatusCode)
+		log.Fatal(err)
 	}
 
-	var (
-		// stdin reads from stdin
-		stdin = bufio.NewReader(os.Stdin)
+	req.Header.Add("Content-Type", "application/json")
+	client := &http.Client{Transport: transport}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		// in and out send and receive json messages to the server
-		in  = json.NewDecoder(conn)
-		out = json.NewEncoder(conn)
-	)
+	defer res.Body.Close()
+	res.Write(os.Stdout)
 
-	defer log.Println("Exited")
-
-	// Loop until user terminates
-	fmt.Println("Echo session starts, press ctrl-C to terminate.")
-	for ctx.Err() == nil {
-
-		// Ask the user to give a message to send to the server
-		fmt.Print("Send: ")
-		msg, err := stdin.ReadString('\n')
-		if err != nil {
-			log.Fatalf("Failed reading stdin: %v", err)
+	framer := http2.NewFramer(ioutil.Discard, buf)
+	for {
+		f, err := framer.ReadFrame()
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			break
 		}
-		msg = strings.TrimRight(msg, "\n")
-
-		// Send the message to the server
-		err = out.Encode(msg)
-		if err != nil {
-			log.Fatalf("Failed sending message: %v", err)
+		switch err.(type) {
+		case nil:
+			log.Println(f)
+		case http2.ConnectionError:
+			// Ignore. There will be many errors of type "PROTOCOL_ERROR, DATA
+			// frame with stream ID 0". Presumably we are abusing the framer.
+		default:
+			log.Println(err, framer.ErrorDetail())
 		}
-
-		// Receive the response from the server
-		var resp string
-		err = in.Decode(&resp)
-		if err != nil {
-			log.Fatalf("Failed receiving message: %v", err)
-		}
-
-		fmt.Printf("Got response %q\n", resp)
 	}
 }
 
-func catchSignal(cancel context.CancelFunc) {
-	sig := make(chan os.Signal)
-	signal.Notify(sig, os.Interrupt)
-	<-sig
-	log.Println("Cancelling due to interrupt")
-	cancel()
+// dialT returns a connection that writes everything that is read to w.
+func dialT(w io.Writer) func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+	return func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+		conn, err := tls.Dial(network, addr, cfg)
+		return &TlsCon{conn, w}, err
+	}
+}
+
+type TlsCon struct {
+	net.Conn
+	T io.Writer // receives everything that is read from Conn
+}
+
+func (w *TlsCon) Read(b []byte) (n int, err error) {
+	n, err = w.Conn.Read(b)
+	w.T.Write(b)
+	return
 }

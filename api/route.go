@@ -69,40 +69,30 @@ func PushList(ctx *gin.Context) {
 		ctx.JSON(400, Response{"message": fmt.Sprintf("not support http %d", ctx.Request.ProtoMajor)})
 		return
 	}
-
-	buf := new(bytes.Buffer)
-	_, err := io.Copy(buf, ctx.Request.Body)
+	b := &Body{PerPage: 200}
+	err := ctx.Bind(b)
 	if err != nil {
 		log.Println(err)
 		ctx.JSON(400, Response{"message": "not support http 2"})
 		return
 	}
-	buf, err = getData(buf.Bytes())
-	if err != nil {
-		ctx.JSON(500, Response{"message": err})
-		return
+	for b.Page >= 0 {
+		buf, err := getData(b)
+		if err != nil {
+			ctx.JSON(500, Response{"message": err})
+			return
+		}
+		_, _ = io.Copy(CustomWriter{w: ctx.Writer}, buf)
+		ctx.Writer.Flush()
+		b.Page--
 	}
-	_, _ = io.Copy(CustomWriter{w: ctx.Writer}, buf)
-	ctx.Writer.Flush()
+
 }
 
-func getData(bits []byte) (*bytes.Buffer, error) {
-	b := &Body{
-		PerPage: 200,
-	}
-	err := json.Unmarshal(bits, b)
-	if err != nil {
-		return nil, err
-	}
-	if b.PerPage < 200 {
-		b.PerPage = 200
-	}
-	if b.Page < 0 {
-		b.Page = 0
-	}
+func getData(b *Body) (*bytes.Buffer, error) {
 	result := make([]*model.News, 0)
 	skip := b.Page * b.PerPage
-	err = mgm.Coll(&model.News{}).SimpleFind(&result, bson.M{}, &options.FindOptions{
+	err := mgm.Coll(&model.News{}).SimpleFind(&result, bson.M{}, &options.FindOptions{
 		Limit: &b.PerPage,
 		Skip:  &skip,
 	})

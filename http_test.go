@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func BenchmarkHttpListApi(t *testing.B) {
+func TestHttp(t *testing.T) {
 	url := "http://localhost:8080/list"
 	start := time.Now()
 	// some computation
