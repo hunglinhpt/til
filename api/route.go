@@ -38,15 +38,15 @@ type Response map[string]interface{}
 // http1 protocol
 func List(ctx *gin.Context) {
 	b := &Body{
-		PerPage: 200,
+		PerPage: 1,
 	}
 	err := ctx.Bind(b)
 	if err != nil {
 		ctx.JSON(400, Response{"message": "Invalid body request"})
 		return
 	}
-	if b.PerPage < 200 {
-		b.PerPage = 200
+	if b.PerPage < 1 {
+		b.PerPage = 1
 	}
 	if b.Page < 0 {
 		b.Page = 0
@@ -69,7 +69,7 @@ func PushList(ctx *gin.Context) {
 		ctx.JSON(400, Response{"message": fmt.Sprintf("not support http %d", ctx.Request.ProtoMajor)})
 		return
 	}
-	b := &Body{PerPage: 200}
+	b := &Body{PerPage: 1}
 	err := ctx.Bind(b)
 	if err != nil {
 		log.Println(err)
