@@ -32,14 +32,14 @@ func firstVersion() *gin.Engine {
 	engine := gin.New()
 
 	middle(engine)
-	engine.GET("/ping", api.List)
+	engine.POST("/list", api.List)
 	return engine
 }
 
 func secondVersion() *gin.Engine {
 	engine := gin.New()
 	middle(engine)
-	engine.GET("/ping", api.List)
+	engine.POST("/list", api.PushList)
 	return engine
 }
 
@@ -49,16 +49,22 @@ func setup() error {
 }
 
 func main() {
+	chErr := make(chan error)
 	if err := setup(); err != nil {
-		fmt.Println(err)
-		return
+		chErr <- err
 	}
 
-	v1 := firstVersion()
 	go func() {
-		v1.Run(":8000")
+		v1 := firstVersion()
+		chErr <- v1.Run(":8080")
 	}()
 
-	v2 := secondVersion()
-	v2.RunTLS(":8080", "./cert.pem", "./key.pem")
+	go func() {
+		v2 := secondVersion()
+		chErr <- v2.RunTLS(":8081", "./cert.pem", "./key.pem")
+	}()
+	select {
+	case err := <-chErr:
+		panic(err)
+	}
 }
