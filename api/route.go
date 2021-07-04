@@ -64,11 +64,7 @@ func PushList(ctx *gin.Context) {
 	if !ctx.Request.ProtoAtLeast(2, 1) {
 		ctx.JSON(400, Response{"message": "not support http 2"})
 	}
-	flush, ok := ctx.Writer.(http.Flusher)
-	if !ok {
-		ctx.JSON(400, Response{"message": "not support http 2"})
-	}
-	flush.Flush()
+
 	buf := new(bytes.Buffer)
 	_, err := io.Copy(buf, ctx.Request.Body)
 	if err != nil {
