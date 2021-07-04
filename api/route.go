@@ -65,7 +65,7 @@ func List(ctx *gin.Context) {
 
 // Support http2 protocol
 func PushList(ctx *gin.Context) {
-	if !ctx.Request.ProtoAtLeast(2, 1) {
+	if !(ctx.Request.ProtoMajor == 2) {
 		ctx.JSON(400, Response{"message": fmt.Sprintf("not support http %d", ctx.Request.ProtoMajor)})
 		return
 	}
@@ -83,6 +83,7 @@ func PushList(ctx *gin.Context) {
 		return
 	}
 	_, _ = io.Copy(CustomWriter{w: ctx.Writer}, buf)
+	ctx.Writer.Flush()
 }
 
 func getData(bits []byte) (*bytes.Buffer, error) {

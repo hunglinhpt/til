@@ -10,11 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func middle(engine *gin.Engine) {
+func middle(engine *gin.Engine, version string) {
 	engine.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 
 		// your custom format
-		return fmt.Sprintf("%s %s %s %s %d %s %s \n",
+		return fmt.Sprintf("%s %s %s %s %s %d %s %s \n", version,
 			param.TimeStamp.Format(time.RFC1123),
 			param.Method,
 			param.Path,
@@ -31,14 +31,14 @@ func firstVersion() *gin.Engine {
 	//
 	engine := gin.New()
 
-	middle(engine)
+	middle(engine, "http1 ")
 	engine.POST("/list", api.List)
 	return engine
 }
 
 func secondVersion() *gin.Engine {
 	engine := gin.New()
-	middle(engine)
+	middle(engine, "http2 ")
 	engine.POST("/list", api.PushList)
 	return engine
 }

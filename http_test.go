@@ -27,7 +27,9 @@ func BenchmarkHttpListApi(t *testing.B) {
 		res, err := client.Do(req)
 		assert.NoError(t, err)
 		defer res.Body.Close()
-		assert.NoError(t, err)
+		//assert.NoError(t, err)
+		//bits, _ := ioutil.ReadAll(res.Body)
+		//fmt.Println(string(bits))
 	}
 	elapsed := time.Since(start)
 	fmt.Println("Http", elapsed)
