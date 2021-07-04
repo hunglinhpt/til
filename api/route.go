@@ -3,11 +3,13 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/kamva/mgm/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
+	"log"
 	"net/http"
 	"til/model"
 )
@@ -33,6 +35,7 @@ type Body struct {
 
 type Response map[string]interface{}
 
+// http1 protocol
 func List(ctx *gin.Context) {
 	b := &Body{
 		PerPage: 200,
@@ -60,19 +63,24 @@ func List(ctx *gin.Context) {
 	ctx.JSON(200, Response{"data": result, "message": "success"})
 }
 
+// Support http2 protocol
 func PushList(ctx *gin.Context) {
 	if !ctx.Request.ProtoAtLeast(2, 1) {
-		ctx.JSON(400, Response{"message": "not support http 2"})
+		ctx.JSON(400, Response{"message": fmt.Sprintf("not support http %d", ctx.Request.ProtoMajor)})
+		return
 	}
 
 	buf := new(bytes.Buffer)
 	_, err := io.Copy(buf, ctx.Request.Body)
 	if err != nil {
+		log.Println(err)
 		ctx.JSON(400, Response{"message": "not support http 2"})
+		return
 	}
 	buf, err = getData(buf.Bytes())
 	if err != nil {
 		ctx.JSON(500, Response{"message": err})
+		return
 	}
 	_, _ = io.Copy(CustomWriter{w: ctx.Writer}, buf)
 }

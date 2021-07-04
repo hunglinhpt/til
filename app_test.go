@@ -7,6 +7,7 @@ import (
 	"github.com/kamva/mgm/v3"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -65,6 +66,8 @@ func BenchmarkHttpsListApi(t *testing.B) {
 		assert.NoError(t, err)
 		defer res.Body.Close()
 		assert.NoError(t, err)
+		bits, _ := ioutil.ReadAll(res.Body)
+		fmt.Println(string(bits))
 	}
 	elapsed := time.Since(start)
 	fmt.Println("Https", elapsed)
