@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -51,7 +50,7 @@ func TestHTTP2(t *testing.T) {
 	// some computation
 
 	//for i := 0; i < 200; i++ {
-	payload := `{"page":200}`
+	payload := `{"page":2000}`
 	Post(url, bytes.NewBuffer([]byte(payload)))
 	elapsed := time.Since(start)
 	fmt.Println("Https", elapsed)
@@ -62,7 +61,7 @@ func TestHttp(t *testing.T) {
 	start := time.Now()
 	// some computation
 
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 2000; i++ {
 		payload := strings.NewReader(fmt.Sprintf(`{"page":%d}`, i))
 		req, err := http.NewRequest("POST", url, payload)
 		assert.NoError(t, err)
@@ -74,9 +73,9 @@ func TestHttp(t *testing.T) {
 		res, err := client.Do(req)
 		assert.NoError(t, err)
 		defer res.Body.Close()
-		assert.NoError(t, err)
-		bits, _ := ioutil.ReadAll(res.Body)
-		fmt.Println(string(bits))
+		//assert.NoError(t, err)
+		//bits, _ := ioutil.ReadAll(res.Body)
+		//fmt.Println(string(bits))
 	}
 	elapsed := time.Since(start)
 	fmt.Println("Http", elapsed)

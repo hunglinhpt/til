@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 )
 
 func Post(url string, buf *bytes.Buffer) {
@@ -27,7 +26,7 @@ func Post(url string, buf *bytes.Buffer) {
 	}
 
 	defer res.Body.Close()
-	res.Write(os.Stdout)
+	//res.Write(os.Stdout)
 
 	framer := http2.NewFramer(ioutil.Discard, buf)
 	for {
