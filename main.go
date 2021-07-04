@@ -32,14 +32,14 @@ func firstVersion() *gin.Engine {
 	engine := gin.New()
 
 	middle(engine)
-	engine.GET("/ping", api.Static)
+	engine.GET("/ping", api.List)
 	return engine
 }
 
 func secondVersion() *gin.Engine {
 	engine := gin.New()
 	middle(engine)
-	engine.GET("/ping", api.Static)
+	engine.GET("/ping", api.List)
 	return engine
 }
 
@@ -48,17 +48,17 @@ func setup() error {
 	return mgm.SetDefaultConfig(nil, "news", options.Client().ApplyURI("mongodb://admin:admin@localhost:27017"))
 }
 
-// func main() {
-// 	if err := setup(); err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-//
-// 	v1 := firstVersion()
-// 	go func() {
-// 		v1.Run(":8000")
-// 	}()
-//
-// 	v2 := secondVersion()
-// 	v2.RunTLS(":8080", "./cert.pem", "./key.pem")
-// }
+func main() {
+	if err := setup(); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	v1 := firstVersion()
+	go func() {
+		v1.Run(":8000")
+	}()
+
+	v2 := secondVersion()
+	v2.RunTLS(":8080", "./cert.pem", "./key.pem")
+}
